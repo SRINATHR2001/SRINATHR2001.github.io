@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}</style>
+<title>Srinath R · DevOps</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Srinath R, DevOps Engineer: Kubernetes, GitOps, observability and on-call for live fintech trading platforms.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout concept: a release log. Each section carries a mono "log line" marker in a left rail;
+   content sits in a single readable column, with figures breaking wider where they need room. */
+:root {
+  --paper:   #F1F4F2;   /* cool grey-green page */
+  --surface: #FFFFFF;   /* figures, code, cards */
+  --ink:     #15201E;   /* text */
+  --muted:   #586663;   /* secondary text */
+  --rule:    #D3DBD8;   /* hairlines, borders */
+  --accent:  #0B7A63;   /* market-green: links, key numbers */
+  --accent-soft: #DCEFE9;
+  --signal:  #B5470F;   /* alerts / "before" values, used sparingly */
+  --signal-soft: #F6E3D8;
+
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --step--1: 0.84rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.55rem;
+  --step-3: 2.1rem;
+  --step-4: clamp(2.6rem, 6vw + 1rem, 4.6rem);
+
+  --measure: 66ch;
+  --wide: 1080px;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0E1514; --surface: #151E1C; --ink: #E3ECE9; --muted: #95A6A2; --rule: #26332F;
+    --accent: #52C4A6; --accent-soft: #15302A; --signal: #F0905F; --signal-soft: #3A2318;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0E1514; --surface: #151E1C; --ink: #E3ECE9; --muted: #95A6A2; --rule: #26332F;
+  --accent: #52C4A6; --accent-soft: #15302A; --signal: #F0905F; --signal-soft: #3A2318;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-body); font-size: 17px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+h1, h2, h3, h4 { font-family: var(--f-display); line-height: 1.12; text-wrap: balance; margin: 0; }
+p, ul, ol, dl, figure, pre { margin: 0; }
+code, .mono { font-family: var(--f-mono); font-size: 0.88em; }
+
+.wrap {
+  max-width: var(--wide); margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- top bar ---------- */
+.topbar { border-bottom: 1px solid var(--rule); }
+.topbar .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between; padding-block: 14px; }
+.topbar .brand { font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); }
+.topbar nav { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.topbar nav a { color: var(--ink); text-decoration: none; font-size: var(--step--1); font-weight: 500; }
+.topbar nav a:hover { color: var(--accent); }
+
+/* ---------- hero ---------- */
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 48px; align-items: end; padding-block: 72px 56px; }
+.hero h1 { font-size: var(--step-4); font-weight: 800; letter-spacing: -0.02em; }
+.hero .role { font-family: var(--f-display); font-size: var(--step-2); font-weight: 500; color: var(--muted); margin-top: 10px; }
+.hero .thesis { font-size: var(--step-1); max-width: 34ch; margin-top: 22px; }
+.hero .links { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 26px; font-weight: 500; }
+.status-pill { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; padding: 5px 12px; border: 1px solid var(--rule); border-radius: 999px; font-size: var(--step--1); color: var(--muted); background: var(--surface); }
+.status-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.rollout { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); font-family: var(--f-mono); font-size: 0.8rem; line-height: 1.75; overflow-x: auto; }
+.rollout .bar { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--rule); color: var(--muted); }
+.rollout pre { padding: 14px 16px 16px; white-space: pre; color: var(--ink); }
+.rollout .p { color: var(--muted); }
+.rollout .ok { color: var(--accent); }
+
+/* ---------- impact strip ---------- */
+.impact { border-block: 1px solid var(--rule); background: var(--surface); }
+.impact .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.impact .stat { padding: 22px 20px 22px 0; display: grid; gap: 4px; align-content: start; }
+.impact .stat + .stat { padding-left: 20px; border-left: 1px solid var(--rule); }
+.impact .stat b { font-family: var(--f-display); font-size: var(--step-3); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--accent); }
+.impact .stat span { font-size: var(--step--1); color: var(--muted); max-width: 24ch; }
+
+/* ---------- sections (contract for section files) ---------- */
+.section { padding-block: 72px; }
+.section + .section { border-top: 1px solid var(--rule); }
+.section-head { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 8px 32px; margin-bottom: 40px; }
+.logline { font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); padding-top: 10px; }
+.logline::before { content: "▸ "; color: var(--accent); }
+.section-title { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
+.lede { color: var(--muted); font-size: var(--step-1); max-width: var(--measure); margin-top: 10px; }
+.body { margin-left: 212px; max-width: var(--measure); display: grid; gap: 16px; }
+
+/* case study */
+.case { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 8px 32px; }
+.case + .case { margin-top: 64px; padding-top: 48px; border-top: 1px dashed var(--rule); }
+.case-meta { display: grid; gap: 10px; align-content: start; font-size: var(--step--1); color: var(--muted); }
+.case-meta .when { font-family: var(--f-mono); }
+.case-main { display: grid; gap: 22px; min-width: 0; }
+.case h3 { font-size: var(--step-2); font-weight: 700; }
+.case .summary { font-size: var(--step-1); max-width: var(--measure); }
+.case h4 { font-family: var(--f-mono); font-size: var(--step--1); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+.case .block { max-width: var(--measure); }
+.case ul:not(.tags) { padding-left: 1.1em; display: grid; gap: 6px; }
+.metric-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.metric { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.metric b { font-family: var(--f-display); font-size: var(--step-2); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.metric b .from { color: var(--signal); text-decoration: line-through; text-decoration-thickness: 2px; font-weight: 500; }
+.metric b .to { color: var(--accent); }
+.metric > span { font-size: var(--step--1); color: var(--muted); }
+
+.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 20px; overflow-x: auto; }
+.figure svg { display: block; width: 100%; height: auto; min-width: 560px; }
+.figure figcaption { margin-top: 12px; font-size: var(--step--1); color: var(--muted); }
+.code { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px 18px; overflow-x: auto; font-family: var(--f-mono); font-size: 0.8rem; line-height: 1.7; white-space: pre; max-height: 26rem; overflow-y: auto; }
+.code .c { color: var(--muted); }
+.code .k { color: var(--accent); }
+
+.tags { list-style: none; padding: 0 !important; display: flex; flex-wrap: wrap; gap: 6px; }
+.tags li { font-family: var(--f-mono); font-size: 0.74rem; padding: 2px 8px; border: 1px solid var(--rule); border-radius: 4px; color: var(--muted); background: var(--paper); }
+
+/* project cards */
+.cards { margin-left: 212px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: 20px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.card .kicker { font-family: var(--f-mono); font-size: 0.74rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.card h3 { font-size: var(--step-1); font-weight: 700; }
+.card p, .card ul { font-size: 0.94rem; }
+.card ul { padding-left: 1.1em; display: grid; gap: 4px; }
+
+/* experience timeline */
+.timeline { margin-left: 212px; list-style: none; padding: 0; display: grid; gap: 36px; max-width: 760px; }
+.tl-item { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 6px 24px; }
+.tl-when { font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); padding-top: 4px; white-space: nowrap; }
+.tl-role { font-family: var(--f-display); font-size: var(--step-1); font-weight: 700; }
+.tl-org { color: var(--muted); }
+.tl-item ul { list-style: disc; padding-left: 1.1em; display: grid; gap: 6px; margin-top: 10px; }
+
+/* skills */
+.skills { margin-left: 212px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; max-width: 860px; }
+.skills dt { font-family: var(--f-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+.skills dd { margin: 0; }
+.skills .learning dt { color: var(--signal); }
+
+/* contact */
+.contact-grid { margin-left: 212px; display: grid; gap: 14px; max-width: var(--measure); }
+.contact-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-size: var(--step-1); }
+.contact-line a, .contact-line .mono { overflow-wrap: anywhere; min-width: 0; }
+.contact-line .label { font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); width: 90px; }
+.copy-btn { font: 500 0.8rem var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+footer { border-top: 1px solid var(--rule); }
+footer .wrap { padding-block: 28px; font-family: var(--f-mono); font-size: var(--step--1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 48px 40px; }
+  .impact .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .impact .stat:nth-child(3) { border-left: 0; padding-left: 0; }
+  .impact .stat:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .section-head, .case { grid-template-columns: minmax(0, 1fr); }
+  .body, .cards, .timeline, .skills, .contact-grid { margin-left: 0; }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .section { padding-block: 52px; }
+  .tl-item { grid-template-columns: minmax(0, 1fr); }
+  .skills { grid-template-columns: minmax(0, 1fr); }
+  .impact .stat b { font-size: var(--step-2); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rollout .cursor { animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <span class="brand">srinath-r · devops</span>
+    <nav aria-label="Sections">
+      <a href="#work">Work</a>
+      <a href="#projects">Projects</a>
+      <a href="#experience">Experience</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="hero-name">
+  <div class="wrap">
+    <div>
+      <h1 id="hero-name">Srinath R</h1>
+      <p class="role">DevOps Engineer · Kubernetes, GitOps, observability</p>
+      <p class="thesis">I help ship changes to live trading platforms almost every evening after the market closes, and I own the monitoring that shows what they're doing while it's open.</p>
+      <span class="status-pill">Open to DevOps, SRE and Platform roles · Chennai · Bengaluru · Mumbai</span>
+      <div class="links">
+        <a href="#contact">Get in touch</a>
+        <a href="https://www.linkedin.com/in/srinath-r-31964b249" rel="noopener">LinkedIn</a>
+        <a href="Srinath_R_DevOps_Resume.pdf" rel="noopener">Résumé (PDF)</a>
+      </div>
+    </div>
+    <div class="rollout" aria-label="Illustrative release commands">
+      <div class="bar"><span>illustrative · release after 15:30 IST market close</span></div>
+<pre><span class="p">$</span> argocd app sync trading-api
+<span class="p">$</span> kubectl rollout status deploy/api -n trading
+Waiting for deployment "api" rollout to finish:
+  2 of 3 updated replicas are available...
+<span class="ok">deployment "api" successfully rolled out</span>
+<span class="p">$</span> <span class="cursor">▍</span></pre>
+    </div>
+  </div>
+</section>
+
+<section class="impact" aria-label="Impact in numbers">
+  <div class="wrap">
+    <div class="stat"><b>~67%</b><span>lower monitoring cost after moving off New Relic</span></div>
+    <div class="stat"><b>13</b><span>microservices on Quantman, the platform I help deploy</span></div>
+    <div class="stat"><b>13</b><span>high-severity VAPT findings closed</span></div>
+    <div class="stat"><b>~15 GB</b><span>of production logs a day, searchable for 30 days</span></div>
+  </div>
+</section>
+
+<section class="section" id="about" aria-labelledby="about-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="logline">whoami</span>
+      <div>
+        <h2 class="section-title" id="about-title">About</h2>
+        <p class="lede">DevOps engineer on retail trading platforms, based in Trichy.</p>
+      </div>
+    </div>
+    <div class="body">
+      <p>I work at Simply Algo Fintech on Quantman and Instaoptions, two retail trading platforms running on Kubernetes. My day is about keeping them deployable and observable: Jenkins builds, Helm charts, ArgoCD syncs, and the logging and monitoring stack I own. I'm part of the on-call rotation. On the 3 broker deployments of Quantman I've handled, I was the technical contact for the broker's team on infrastructure, network access and security.</p>
+      <p>Production changes go out after the market closes at 15:30 IST. I prefer changes I can roll back quickly, so releases are rolling updates behind readiness probes, with the desired state kept in Git. I also watch what things cost. Moving our observability off New Relic to self-hosted Elasticsearch, Kibana and Prometheus cut monitoring spend from ~$1,225 to $400 a month.</p>
+      <p>Next, I want a DevOps, SRE or Platform role with real work in AWS, Kubernetes and incident management. Right now I'm going deeper on Terraform and preparing for the CKAD.</p>
+    </div>
+  </div>
+</section>
+<section class="section" id="work" aria-labelledby="work-title"><div class="wrap"><div class="section-head"><span class="logline">three case studies</span><div><h2 class="section-title" id="work-title">Selected work</h2><p class="lede">Three pieces of work on live trading platforms: what was wrong, what I changed, and what happened.</p></div></div><article class="case" id="case-observability" aria-labelledby="case-observability-title">
+  <div class="case-meta">
+    <span class="when">Nov 2025 – present</span>
+    <span>Simply Algo Fintech · DevOps Engineer · I own this stack</span>
+    <ul class="tags"><li>Elasticsearch</li><li>Kibana</li><li>Filebeat</li><li>ILM/SLM</li><li>Prometheus</li><li>Grafana</li><li>Uptime Kuma</li><li>Kubernetes</li></ul>
+  </div>
+  <div class="case-main">
+    <h3 id="case-observability-title">Moving production observability off New Relic</h3>
+    <p class="summary">I moved production logging and monitoring for our retail trading platforms from New Relic to a self-hosted stack: Filebeat, Elasticsearch and Kibana for logs and Prometheus with Grafana for metrics. Monitoring cost dropped from about $1,225 a month to $400, and I designed the retention rules that keep it there.</p>
+    <div class="metric-row">
+      <div class="metric"><b><span class="from">~$1,225</span> → <span class="to">$400</span></b><span>monitoring cost per month</span></div>
+      <div class="metric"><b><span class="to">~67%</span></b><span>lower monitoring spend</span></div>
+      <div class="metric"><b><span class="to">~$10K</span></b><span>saved per year</span></div>
+      <div class="metric"><b>~15 GB</b><span>production logs per day</span></div>
+    </div>
+    <div class="block">
+      <h4>The problem</h4>
+      <p>Our trading platforms run on Kubernetes, and we paid New Relic for logs and monitoring. The bill was about $1,225 a month. Production produces around 15 GB of logs a day, so keeping everything in a hosted tool was the expensive path. We needed the same visibility for a fraction of the cost, with retention we controlled.</p>
+    </div>
+    <div class="block">
+      <h4>What I did</h4>
+      <ul>
+        <li>Built the log pipeline: Filebeat collects container and node logs and ships them straight to Elasticsearch, which stores and indexes them, and Kibana is where the team searches and builds views.</li>
+        <li>Set up Prometheus to scrape cluster and service metrics, with Grafana dashboards on top.</li>
+        <li>Configured alerting on the metrics so the team hears about problems quickly.</li>
+        <li>Added Uptime Kuma to check availability of our customer-facing web platforms, with alerts when a check fails.</li>
+        <li>Designed index lifecycle (ILM) and snapshot lifecycle (SLM) policies so storage stays bounded as log volume grows.</li>
+      </ul>
+    </div>
+    <figure class="figure">
+      <svg viewBox="0 0 760 372" role="img" aria-labelledby="obs-fig-title obs-fig-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="obs-fig-title">Self-hosted observability architecture and log retention</title>
+        <desc id="obs-fig-desc">Logs flow from Kubernetes pods and nodes through Filebeat and Elasticsearch to Kibana. Metrics flow through Prometheus and Grafana to alerts, and Uptime Kuma also raises alerts. Below, a timeline shows staging logs kept 7 days, production searchable for 30 days, and snapshots kept to 150 days.</desc>
+        <defs>
+          <marker id="obs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+
+        <!-- lane labels -->
+        <text x="175" y="38" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)" letter-spacing="1">LOGS · ~15 GB/DAY</text>
+        <text x="175" y="142" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)" letter-spacing="1">METRICS &amp; AVAILABILITY</text>
+
+        <!-- source -->
+        <rect x="30" y="50" width="120" height="150" rx="6" fill="var(--paper)" stroke="var(--rule)"/>
+        <text x="90" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Pods &amp; nodes</text>
+        <text x="90" y="136" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">Kubernetes</text>
+
+        <!-- logs lane -->
+        <rect x="175" y="50" width="120" height="48" rx="6" fill="var(--surface)" stroke="var(--rule)"/>
+        <text x="235" y="71" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Filebeat</text>
+        <text x="235" y="88" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">ship logs</text>
+
+        <rect x="320" y="50" width="120" height="48" rx="6" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="380" y="71" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Elasticsearch</text>
+        <text x="380" y="88" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink)">ILM · SLM</text>
+
+        <rect x="465" y="50" width="120" height="48" rx="6" fill="var(--surface)" stroke="var(--rule)"/>
+        <text x="525" y="71" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Kibana</text>
+        <text x="525" y="88" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">search · views</text>
+
+        <line x1="150" y1="74" x2="173" y2="74" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+        <line x1="295" y1="74" x2="318" y2="74" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+        <line x1="440" y1="74" x2="463" y2="74" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+
+        <!-- metrics lane -->
+        <rect x="175" y="152" width="120" height="48" rx="6" fill="var(--surface)" stroke="var(--rule)"/>
+        <text x="235" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Prometheus</text>
+        <text x="235" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">scrape metrics</text>
+
+        <rect x="320" y="152" width="120" height="48" rx="6" fill="var(--surface)" stroke="var(--rule)"/>
+        <text x="380" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Grafana</text>
+        <text x="380" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">dashboards</text>
+
+        <rect x="465" y="152" width="120" height="48" rx="6" fill="var(--signal-soft)" stroke="var(--signal)"/>
+        <text x="525" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Alerts</text>
+        <text x="525" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink)">notify team</text>
+
+        <rect x="610" y="152" width="120" height="48" rx="6" fill="var(--surface)" stroke="var(--rule)"/>
+        <text x="670" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">Uptime Kuma</text>
+        <text x="670" y="190" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">web availability</text>
+
+        <line x1="150" y1="176" x2="173" y2="176" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+        <line x1="295" y1="176" x2="318" y2="176" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+        <line x1="440" y1="176" x2="463" y2="176" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+        <line x1="610" y1="176" x2="587" y2="176" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#obs-arrow)"/>
+
+        <!-- divider -->
+        <line x1="30" y1="226" x2="730" y2="226" stroke="var(--rule)" stroke-width="1" stroke-dasharray="4 4" fill="none"/>
+
+        <!-- retention timeline: x = 130 + 4px per day (0–150d) -->
+        <text x="30" y="250" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)" letter-spacing="1">LOG RETENTION</text>
+
+        <text x="30" y="275" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">staging</text>
+        <rect x="130" y="263" width="600" height="16" rx="3" fill="var(--paper)" stroke="var(--rule)"/>
+        <rect x="130" y="263" width="28" height="16" rx="3" fill="var(--muted)"/>
+        <text x="166" y="275" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">7 days, then deleted</text>
+
+        <text x="30" y="303" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">production</text>
+        <rect x="130" y="291" width="120" height="16" rx="3" fill="var(--accent)"/>
+        <text x="190" y="303" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--surface)">searchable</text>
+        <rect x="250" y="291" width="480" height="16" rx="3" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="490" y="303" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink)">snapshots (SLM)</text>
+
+        <line x1="130" y1="315" x2="130" y2="321" stroke="var(--muted)" fill="none"/>
+        <line x1="158" y1="315" x2="158" y2="321" stroke="var(--muted)" fill="none"/>
+        <line x1="250" y1="315" x2="250" y2="321" stroke="var(--muted)" fill="none"/>
+        <line x1="730" y1="315" x2="730" y2="321" stroke="var(--muted)" fill="none"/>
+        <text x="130" y="334" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">0d</text>
+        <text x="158" y="334" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">7d</text>
+        <text x="250" y="334" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">30d</text>
+        <text x="730" y="334" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">150d</text>
+
+        <text x="30" y="360" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">Indices roll over daily or at 5 GB, whichever comes first.</text>
+      </svg>
+      <figcaption>Logs and metrics run in two lanes from the same cluster. Elasticsearch lifecycle policies decide how long each index stays searchable and how long snapshots are kept.</figcaption>
+    </figure>
+    <div class="block">
+      <h4>Retention design</h4>
+      <p>Log storage is where self-hosting gets expensive if nobody plans for it. Staging indices are deleted after 7 days. Production indices stay searchable in Elasticsearch for 30 days, then live on as snapshots until day 150, so we can restore older logs for an investigation without paying to keep them hot. Indices roll over every day or at 5 GB, which keeps each one a predictable size.</p>
+    </div>
+    <pre class="code"><span class="c"># illustrative: production log policy, shape matches the real rules</span>
+<span class="k">PUT</span> _ilm/policy/prod-logs
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "actions": {
+          "rollover": { "max_age": "1d", "max_primary_shard_size": "5gb" }
+        }
+      },
+      "delete": {
+        "min_age": "30d",
+        "actions": {
+          "wait_for_snapshot": { "policy": "prod-snapshots" },
+          "delete": {}
+        }
+      }
+    }
+  }
+}
+
+<span class="c"># illustrative: snapshots kept for 150 days</span>
+<span class="k">PUT</span> _slm/policy/prod-snapshots
+{
+  "schedule": "0 30 1 * * ?",
+  "name": "&lt;prod-logs-snap-{now/d}&gt;",
+  "repository": "log-snapshots",
+  "retention": { "expire_after": "150d" }
+}</pre>
+    <div class="block">
+      <h4>Result</h4>
+      <p>Monitoring cost went from about $1,225 a month to $400, roughly 67% lower and about $10K saved a year. The team kept log search, dashboards and alerting, and we now control how long data is kept. I own the stack day to day: pipeline changes, dashboards, alert rules and retention.</p>
+    </div>
+    <div class="block">
+      <h4>What I'd do next</h4>
+      <p>As traffic grows, I would add Elasticsearch replicas and more nodes for high availability. I would move alerting toward SLOs, so alerts fire on user-facing error budgets instead of raw thresholds. I would also look at OpenTelemetry to add traces and keep instrumentation portable as the company moves to AWS EKS.</p>
+    </div>
+  </div>
+</article>
+<article class="case" id="case-releases" aria-labelledby="case-releases-title">
+  <div class="case-meta">
+    <span class="when">Nov 2025 – present</span>
+    <span>Simply Algo Fintech · DevOps Engineer · Quantman &amp; Instaoptions</span>
+    <ul class="tags"><li>Jenkins</li><li>Helm</li><li>ArgoCD</li><li>Kubernetes</li><li>DigitalOcean</li><li>GitOps</li></ul>
+  </div>
+  <div class="case-main">
+    <h3 id="case-releases-title">Almost-daily releases to live trading platforms, after the market closes</h3>
+    <p class="summary">Quantman is hosted for 4 major Indian stockbrokers and 2 white-label partners. Production changes ship almost every day, after Indian market hours end at 15:30 IST. I own deployments for a subset of Quantman's 13 microservices and help with the rest and with Instaoptions. I also handled 3 broker deployments of Quantman as the technical point of contact.</p>
+    <div class="metric-row">
+      <div class="metric"><b>13</b><span>Quantman microservices on a ~10-node cluster</span></div>
+      <div class="metric"><b>Almost daily</b><span>production releases, after 15:30 IST</span></div>
+      <div class="metric"><b>3</b><span>broker deployments (2 end-to-end, 1 support)</span></div>
+    </div>
+    <div class="block">
+      <h4>The problem</h4>
+      <p>Traders use these platforms while the market is open, so a bad release during or near market hours hits people with live positions. Releases have to land in the window after close and keep services available while pods are replaced. Each broker also gets its own deployment of Quantman.</p>
+    </div>
+    <div class="block">
+      <h4>What I did</h4>
+      <ul>
+        <li>Shipped releases through Jenkins (CI), Helm charts and ArgoCD, which syncs the cluster to what is in Git.</li>
+        <li>Used Kubernetes rolling updates with readiness probes, so a new pod only takes traffic once it reports ready.</li>
+        <li>Tuned maxSurge and maxUnavailable to keep trading services available while old pods are replaced.</li>
+        <li>Wrote ArgoCD Application manifests for newly deployed services, so they follow the same GitOps path as the rest.</li>
+        <li>Handled 3 broker deployments of Quantman: 2 end-to-end and 1 in a support role.</li>
+        <li>Acted as the technical point of contact for the broker's team. I gathered infra requirements, raised IP-whitelisting and network-access requests, attended networking and security meetings and handled security escalations.</li>
+      </ul>
+    </div>
+    <figure class="figure">
+      <svg viewBox="0 0 760 400" role="img" aria-labelledby="rel-fig-title rel-fig-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="rel-fig-title">Release pipeline and rolling update</title>
+        <desc id="rel-fig-desc">A change moves from git push to a Jenkins CI build, then an image in the registry, then Helm chart values, then an ArgoCD sync, then a Kubernetes rolling update. An inset shows 3 replicas being replaced one at a time: a new pod is added, it passes its readiness probe, an old pod drains, until all 3 run the new version.</desc>
+        <defs>
+          <marker id="rel-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+
+        <text x="21" y="24" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">release window: after market close, 15:30 IST</text>
+
+        <!-- pipeline stages -->
+        <g font-family="IBM Plex Mono, monospace" text-anchor="middle">
+          <rect x="21" y="40" width="108" height="64" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+          <text x="75" y="67" font-size="12" font-weight="600" fill="var(--ink)">git push</text>
+          <text x="75" y="86" font-size="10" fill="var(--muted)">app repo</text>
+
+          <rect x="143" y="40" width="108" height="64" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+          <text x="197" y="67" font-size="12" font-weight="600" fill="var(--ink)">Jenkins</text>
+          <text x="197" y="86" font-size="10" fill="var(--muted)">CI build</text>
+
+          <rect x="265" y="40" width="108" height="64" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+          <text x="319" y="67" font-size="12" font-weight="600" fill="var(--ink)">Registry</text>
+          <text x="319" y="86" font-size="10" fill="var(--muted)">image:tag</text>
+
+          <rect x="387" y="40" width="108" height="64" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+          <text x="441" y="67" font-size="12" font-weight="600" fill="var(--ink)">Helm values</text>
+          <text x="441" y="86" font-size="10" fill="var(--muted)">chart + tag</text>
+
+          <rect x="509" y="40" width="108" height="64" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="563" y="67" font-size="12" font-weight="600" fill="var(--ink)">ArgoCD</text>
+          <text x="563" y="86" font-size="10" fill="var(--muted)">sync (GitOps)</text>
+
+          <rect x="631" y="40" width="108" height="64" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+          <text x="685" y="67" font-size="12" font-weight="600" fill="var(--ink)">Kubernetes</text>
+          <text x="685" y="86" font-size="10" fill="var(--muted)">rolling update</text>
+        </g>
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <line x1="131" y1="72" x2="141" y2="72" marker-end="url(#rel-arrow)"/>
+          <line x1="253" y1="72" x2="263" y2="72" marker-end="url(#rel-arrow)"/>
+          <line x1="375" y1="72" x2="385" y2="72" marker-end="url(#rel-arrow)"/>
+          <line x1="497" y1="72" x2="507" y2="72" marker-end="url(#rel-arrow)"/>
+          <line x1="619" y1="72" x2="629" y2="72" marker-end="url(#rel-arrow)"/>
+          <line x1="685" y1="106" x2="685" y2="138" stroke-dasharray="4 4"/>
+        </g>
+
+        <!-- inset: rolling update of 3 replicas -->
+        <rect x="20" y="140" width="720" height="214" rx="6" fill="var(--paper)" stroke="var(--rule)" stroke-width="1"/>
+        <text x="40" y="164" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">Rolling update, 3 replicas (illustrative: maxSurge 1, maxUnavailable 0)</text>
+
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5">
+          <!-- stage 1 -->
+          <text x="115" y="188" text-anchor="middle" fill="var(--muted)">1 · steady</text>
+          <rect x="55" y="198" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="115" y="215" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="55" y="230" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="115" y="247" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="55" y="262" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="115" y="279" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <text x="115" y="340" text-anchor="middle" fill="var(--muted)">serving 3</text>
+
+          <!-- stage 2 -->
+          <text x="290" y="188" text-anchor="middle" fill="var(--muted)">2 · surge +1</text>
+          <rect x="230" y="198" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="290" y="215" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="230" y="230" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="290" y="247" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="230" y="262" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="290" y="279" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="230" y="294" width="120" height="26" rx="4" fill="var(--surface)" stroke="var(--muted)" stroke-dasharray="4 3"/>
+          <text x="290" y="311" text-anchor="middle" fill="var(--ink)">v2 · probing</text>
+          <text x="290" y="340" text-anchor="middle" fill="var(--muted)">serving 3</text>
+
+          <!-- stage 3 -->
+          <text x="465" y="188" text-anchor="middle" fill="var(--muted)">3 · probe passed</text>
+          <rect x="405" y="198" width="120" height="26" rx="4" fill="var(--signal-soft)" stroke="var(--signal)"/>
+          <text x="465" y="215" text-anchor="middle" fill="var(--ink)">v1 · draining</text>
+          <rect x="405" y="230" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="465" y="247" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="405" y="262" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="465" y="279" text-anchor="middle" fill="var(--ink)">v1 · ready</text>
+          <rect x="405" y="294" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="465" y="311" text-anchor="middle" fill="var(--ink)">v2 · ready</text>
+          <text x="465" y="340" text-anchor="middle" fill="var(--muted)">serving 3</text>
+
+          <!-- stage 4 -->
+          <text x="640" y="188" text-anchor="middle" fill="var(--muted)">4 · rolled out</text>
+          <rect x="580" y="198" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="640" y="215" text-anchor="middle" fill="var(--ink)">v2 · ready</text>
+          <rect x="580" y="230" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="640" y="247" text-anchor="middle" fill="var(--ink)">v2 · ready</text>
+          <rect x="580" y="262" width="120" height="26" rx="4" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="640" y="279" text-anchor="middle" fill="var(--ink)">v2 · ready</text>
+          <text x="640" y="340" text-anchor="middle" fill="var(--muted)">serving 3</text>
+        </g>
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <line x1="181" y1="259" x2="224" y2="259" marker-end="url(#rel-arrow)"/>
+          <line x1="356" y1="259" x2="399" y2="259" marker-end="url(#rel-arrow)"/>
+          <line x1="531" y1="259" x2="574" y2="259" marker-end="url(#rel-arrow)"/>
+        </g>
+
+        <!-- legend -->
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5">
+          <rect x="21" y="372" width="14" height="12" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="41" y="382" fill="var(--muted)">ready, takes traffic</text>
+          <rect x="221" y="372" width="14" height="12" rx="2" fill="var(--surface)" stroke="var(--muted)" stroke-dasharray="3 2"/>
+          <text x="241" y="382" fill="var(--muted)">readiness probe pending, no traffic</text>
+          <rect x="521" y="372" width="14" height="12" rx="2" fill="var(--signal-soft)" stroke="var(--signal)"/>
+          <text x="541" y="382" fill="var(--muted)">old pod draining</text>
+        </g>
+      </svg>
+      <figcaption>The release path from commit to cluster. Inset: with maxUnavailable at 0, a new pod must pass its readiness probe before an old one drains, so the service never drops below its desired replica count. Replica count and values are illustrative.</figcaption>
+    </figure>
+    <pre class="code"><span class="c"># Illustrative only: generic names, not production values</span>
+<span class="k">apiVersion</span>: apps/v1
+<span class="k">kind</span>: Deployment
+<span class="k">metadata</span>:
+  <span class="k">name</span>: api
+<span class="k">spec</span>:
+  <span class="k">replicas</span>: 3
+  <span class="k">strategy</span>:
+    <span class="k">type</span>: RollingUpdate
+    <span class="k">rollingUpdate</span>:
+      <span class="k">maxSurge</span>: 1         <span class="c"># add one new pod before removing an old one</span>
+      <span class="k">maxUnavailable</span>: 0   <span class="c"># never drop below the desired replica count</span>
+  <span class="k">template</span>:
+    <span class="k">spec</span>:
+      <span class="k">containers</span>:
+        - <span class="k">name</span>: api
+          <span class="k">image</span>: registry.example.com/api:1.4.2
+          <span class="k">readinessProbe</span>:      <span class="c"># no traffic until this passes</span>
+            <span class="k">httpGet</span>:
+              <span class="k">path</span>: /healthz
+              <span class="k">port</span>: 8080
+            <span class="k">initialDelaySeconds</span>: 5
+            <span class="k">periodSeconds</span>: 5
+            <span class="k">failureThreshold</span>: 3</pre>
+    <div class="block">
+      <h4>Result</h4>
+      <p>Production changes ship almost daily in the window after market close. Rolling updates with readiness probes replace pods gradually, so trading services stay available while a release goes out. New services get an ArgoCD Application manifest and follow the same Git-driven path as existing ones. I handled three broker deployments of Quantman (two end to end, one in a support role) and was the technical point of contact for the broker's team.</p>
+    </div>
+    <div class="block">
+      <h4>What I'd do next</h4>
+      <p>I want to try progressive delivery with Argo Rollouts, so a release goes to a small canary first and is promoted only if its metrics look healthy. I'd pair that with automated rollback when an SLO error budget starts burning too fast. For the company's move to AWS EKS, I'd like to define the new infrastructure in Terraform from the start, which also means taking my Terraform skills past the basics.</p>
+    </div>
+  </div>
+</article>
+<article class="case" id="case-security" aria-labelledby="case-security-title">
+  <div class="case-meta">
+    <span class="when">Nov 2025 – present</span>
+    <span>Simply Algo Fintech · DevOps Engineer</span>
+    <ul class="tags"><li>Kubernetes RBAC</li><li>VAPT</li><li>SOC audit</li><li>rsyslog</li><li>On-call</li></ul>
+  </div>
+  <div class="case-main">
+    <h3 id="case-security-title">Scoped access and audit hardening for a trading platform</h3>
+    <p class="summary">Quantman runs in-house for 4 major Indian stockbrokers and 2 white-label partners, so who can touch the cluster matters. I set up namespace-scoped Kubernetes RBAC so developers can debug their own services without reaching cluster internals. I also supported VAPT and SOC audits with an external audit firm and remediated the findings.</p>
+    <div class="metric-row">
+      <div class="metric"><b><span class="to">13</span></b><span>high-severity findings closed</span></div>
+      <div class="metric"><b><span class="to">None</span></b><span>developer access to cluster-critical namespaces</span></div>
+    </div>
+    <div class="block">
+      <h4>The problem</h4>
+      <p>Developers need to read logs, port-forward to a service and open a shell in a pod to debug what they own. Cluster-wide access would make that easy, but it would also expose kube-system and other cluster-critical namespaces. At the same time, the company was going through VAPT and SOC audits. Auditors needed access to inspect the cluster, and we needed audit logs to show what happened inside pods.</p>
+    </div>
+    <div class="block">
+      <h4>What I did</h4>
+      <ul>
+        <li>Wrote namespace-scoped Roles and RoleBindings. Developers can list pods and services, port-forward and exec only in their own app namespaces.</li>
+        <li>Kept kube-system and kube-node-lease out of every developer binding. A request there has no matching rule, so the API server denies it.</li>
+        <li>Gave the external audit firm scoped cluster access for the VAPT and SOC work.</li>
+        <li>Set up pod-level audit logging with rsyslog so activity inside pods leaves a record.</li>
+        <li>Worked through the audit findings and remediated them until the 13 high-severity vulnerabilities were closed.</li>
+        <li>Took part in on-call, including off-hours security escalations with broker clients. One of them was a 4 AM call on a Sunday.</li>
+      </ul>
+    </div>
+    <figure class="figure">
+      <svg viewBox="0 0 760 350" role="img" aria-labelledby="sec-rbac-title sec-rbac-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="sec-rbac-title">Namespace-scoped RBAC for developers</title>
+        <desc id="sec-rbac-desc">A developer is bound by a RoleBinding to a Role that allows get, list and watch on pods, pod logs and services, plus create on pods/portforward and pods/exec. This applies only in app namespaces. kube-system and kube-node-lease have no binding, so access there is denied.</desc>
+
+        <!-- Developer -->
+        <rect x="20" y="122" width="120" height="56" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+        <text x="80" y="146" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="var(--ink)">Developer</text>
+        <text x="80" y="165" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">kubectl user</text>
+
+        <!-- arrow dev -> binding -->
+        <line x1="140" y1="150" x2="172" y2="150" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
+        <polygon points="180,150 171,145 171,155" fill="var(--accent)"/>
+
+        <!-- RoleBinding -->
+        <rect x="180" y="122" width="150" height="56" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+        <text x="255" y="146" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">RoleBinding</text>
+        <text x="255" y="165" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">one per app namespace</text>
+
+        <!-- arrow binding -> role -->
+        <line x1="330" y1="150" x2="362" y2="150" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
+        <polygon points="370,150 361,145 361,155" fill="var(--accent)"/>
+
+        <!-- Role -->
+        <rect x="370" y="60" width="210" height="180" rx="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="384" y="84" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">Role</text>
+        <text x="384" y="108" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">get · list · watch</text>
+        <text x="384" y="125" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">pods, pods/log, services</text>
+        <text x="384" y="153" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">create  (port-forward)</text>
+        <text x="384" y="170" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">pods/portforward</text>
+        <text x="384" y="198" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">create  (exec)</text>
+        <text x="384" y="215" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">pods/exec</text>
+
+        <!-- arrow role -> allowed -->
+        <line x1="580" y1="150" x2="602" y2="150" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
+        <polygon points="610,150 601,145 601,155" fill="var(--accent)"/>
+
+        <!-- Allowed namespaces -->
+        <rect x="610" y="96" width="130" height="108" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="675" y="120" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink)">ALLOWED</text>
+        <text x="675" y="146" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink)">team-app</text>
+        <text x="675" y="166" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">and other app</text>
+        <text x="675" y="182" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">namespaces</text>
+
+        <!-- denied path -->
+        <path d="M80 178 V305 H360" fill="none" stroke="var(--signal)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <polygon points="368,305 359,300 359,310" fill="var(--signal)"/>
+        <text x="96" y="296" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--signal)">no binding: API server denies</text>
+
+        <text x="370" y="270" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--signal)">CLUSTER-CRITICAL · BLOCKED</text>
+        <rect x="370" y="282" width="170" height="46" rx="6" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1.5"/>
+        <text x="455" y="310" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink)">kube-system</text>
+        <rect x="560" y="282" width="180" height="46" rx="6" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1.5"/>
+        <text x="650" y="310" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink)">kube-node-lease</text>
+      </svg>
+      <figcaption>Developers get a Role only through RoleBindings in app namespaces. kube-system and kube-node-lease have no developer binding, so those requests are denied. Rule details are illustrative.</figcaption>
+    </figure>
+    <pre class="code"><span class="c"># Illustrative only: the shape of a developer Role, not the production manifest.</span>
+<span class="k">apiVersion</span>: rbac.authorization.k8s.io/v1
+<span class="k">kind</span>: Role
+<span class="k">metadata</span>:
+  <span class="k">name</span>: developer
+  <span class="k">namespace</span>: team-app
+<span class="k">rules</span>:
+  <span class="c"># read pods, their logs and services</span>
+  - <span class="k">apiGroups</span>: [""]
+    <span class="k">resources</span>: ["pods", "pods/log", "services"]
+    <span class="k">verbs</span>: ["get", "list", "watch"]
+  <span class="c"># kubectl port-forward and kubectl exec need create on these subresources</span>
+  - <span class="k">apiGroups</span>: [""]
+    <span class="k">resources</span>: ["pods/portforward", "pods/exec"]
+    <span class="k">verbs</span>: ["get", "create"]</pre>
+    <div class="block">
+      <h4>Result</h4>
+      <p>Developers can debug their own services without asking for admin access, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, pods now produce audit logs through rsyslog, and 13 high-severity vulnerabilities from the findings are closed.</p>
+    </div>
+    <div class="block">
+      <h4>What I'd do next</h4>
+      <p>I would move these rules into policy as code with Kyverno or OPA Gatekeeper, so a risky manifest is rejected at admission time instead of found in an audit. I would add image scanning with Trivy to the Jenkins pipeline so vulnerable images fail the build. I would also move application secrets into a dedicated secrets manager as part of the move to AWS.</p>
+    </div>
+  </div>
+</article></div></section>
+<section class="section" id="projects" aria-labelledby="projects-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="logline">more deployments</span>
+      <div>
+        <h2 class="section-title" id="projects-title">Other things I've built</h2>
+        <p class="lede">Smaller pieces of work from both jobs. Two of them I built from scratch.</p>
+      </div>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <span class="kicker">Simply Algo · 2025–26</span>
+        <h3>First mobile CI/CD pipeline for Quantman Lite</h3>
+        <ul>
+          <li>Built the company's first mobile pipeline from scratch with Expo EAS for the React Native app.</li>
+          <li>Ships over-the-air (OTA) updates to the app.</li>
+          <li>Handles App Store and Play Store builds and submission.</li>
+        </ul>
+        <ul class="tags"><li>Expo EAS</li><li>React Native</li><li>App Store</li><li>Play Store</li></ul>
+      </article>
+      <article class="card">
+        <span class="kicker">Codingmart · VAHN · 2024–25</span>
+        <h3>AWS foundation for a trucking payments platform</h3>
+        <ul>
+          <li>Set up separate staging and production accounts under AWS Organizations.</li>
+          <li>Built the VPC with NAT Gateways, ELB, PostgreSQL on RDS and least-privilege IAM roles.</li>
+          <li>Wrote Jenkins and Docker build and deploy pipelines.</li>
+        </ul>
+        <ul class="tags"><li>AWS</li><li>VPC</li><li>RDS</li><li>IAM</li><li>Jenkins</li><li>Docker</li></ul>
+      </article>
+      <article class="card">
+        <span class="kicker">Codingmart · TATA iQ · 2024–25</span>
+        <h3>CI testing and monitoring for Connected Health</h3>
+        <ul>
+          <li>Wired the QA team's BrowserStack mobile test suites into GitHub Actions so they run on every build.</li>
+          <li>Built Prometheus and Grafana dashboards for device and service health.</li>
+          <li>Sent alerts to Slack.</li>
+        </ul>
+        <ul class="tags"><li>GitHub Actions</li><li>BrowserStack</li><li>Prometheus</li><li>Grafana</li><li>Slack</li></ul>
+      </article>
+    </div>
+  </div>
+</section>
+<section class="section" id="experience" aria-labelledby="experience-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="logline">git log --oneline career</span>
+      <div>
+        <h2 class="section-title" id="experience-title">Experience</h2>
+        <p class="lede">About two years as a full-time DevOps engineer, after a 10-month DevOps internship.</p>
+      </div>
+    </div>
+    <ol class="timeline">
+      <li class="tl-item">
+        <span class="tl-when">Nov 2025 – now</span>
+        <div>
+          <div class="tl-role">DevOps Engineer</div>
+          <div class="tl-org">Simply Algo Fintech</div>
+          <ul>
+            <li>I own the monitoring and logging stack. I moved production observability from New Relic to self-hosted Elasticsearch/Kibana and Prometheus/Grafana, cutting monitoring cost from ~$1,225 to $400 a month. <a href="#case-observability">Case study</a></li>
+            <li>I own deployments for a subset of Quantman's 13 microservices and help with the rest and with Instaoptions. Releases ship almost daily after market hours through Jenkins, Helm and ArgoCD. <a href="#case-releases">Case study</a></li>
+            <li>I set up namespace-scoped Kubernetes RBAC and supported a VAPT and SOC audit, closing 13 high-severity vulnerabilities. <a href="#case-security">Case study</a></li>
+            <li>I handled 3 broker deployments of Quantman (2 end-to-end, 1 in a support role) as the technical contact for the broker's team, and built the company's first mobile CI/CD pipeline with Expo EAS.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="tl-item">
+        <span class="tl-when">Nov 2024 – Sep 2025</span>
+        <div>
+          <div class="tl-role">DevOps Engineer</div>
+          <div class="tl-org">Codingmart Technologies</div>
+          <ul>
+            <li>Built the initial AWS foundation for VAHN, a trucking payments platform: separate staging and production accounts under AWS Organizations, VPC with NAT Gateways, ELB, RDS PostgreSQL and least-privilege IAM, with Jenkins and Docker pipelines.</li>
+            <li>For TATA iQ's IoT health-monitoring platform, wired the QA team's BrowserStack mobile tests into GitHub Actions on every build and set up Prometheus and Grafana dashboards with Slack alerts.</li>
+            <li>Containerised apps with Docker and Docker Compose for consistent dev, staging and prod, and provisioned EC2 instances with Terraform.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="tl-item">
+        <span class="tl-when">Jan 2024 – Oct 2024</span>
+        <div>
+          <div class="tl-role">DevOps Intern</div>
+          <div class="tl-org">Codingmart Technologies</div>
+          <ul>
+            <li>Started on CI/CD pipelines, Docker and AWS for client projects.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="tl-item">
+        <span class="tl-when">2020 – 2024</span>
+        <div>
+          <div class="tl-role">B.E. Computer Science and Engineering</div>
+          <div class="tl-org">Dr. N.G.P. Institute of Technology, Coimbatore</div>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+<section class="section" id="skills" aria-labelledby="skills-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="logline">kubectl get skills</span>
+      <div>
+        <h2 class="section-title" id="skills-title">Tools I use in production</h2>
+        <p class="lede">These are tools I have used on real systems. What I am still learning is listed separately at the end.</p>
+      </div>
+    </div>
+    <dl class="skills">
+      <div><dt>Cloud</dt><dd><ul class="tags"><li>AWS EC2</li><li>S3</li><li>IAM</li><li>RDS</li><li>ELB</li><li>VPC</li><li>NAT Gateway</li><li>AWS Organizations</li><li>DigitalOcean</li></ul></dd></div>
+      <div><dt>Containers &amp; orchestration</dt><dd><ul class="tags"><li>Kubernetes</li><li>RBAC</li><li>Ingress</li><li>Namespaces</li><li>Probes</li><li>Rolling updates</li><li>Helm</li><li>Docker</li><li>Docker Compose</li></ul></dd></div>
+      <div><dt>CI/CD &amp; GitOps</dt><dd><ul class="tags"><li>Jenkins</li><li>GitHub Actions</li><li>ArgoCD</li><li>Expo EAS</li><li>BrowserStack integration</li></ul></dd></div>
+      <div><dt>Observability</dt><dd><ul class="tags"><li>Elasticsearch</li><li>Kibana</li><li>Filebeat</li><li>ILM/SLM</li><li>Prometheus</li><li>Grafana</li><li>Uptime Kuma</li><li>Slack alerting</li></ul></dd></div>
+      <div><dt>Security</dt><dd><ul class="tags"><li>VAPT remediation</li><li>SOC audit support</li><li>IAM least privilege</li><li>Kubernetes RBAC</li><li>rsyslog audit logging</li><li>Nginx</li></ul></dd></div>
+      <div><dt>Scripting &amp; IaC</dt><dd><ul class="tags"><li>Bash</li><li>Python</li><li>YAML</li><li>Git</li><li>Terraform (basic: EC2)</li></ul></dd></div>
+      <div class="learning"><dt>Learning now</dt><dd>Going deeper with Terraform, learning Ansible, and preparing for the CKAD exam.</dd></div>
+    </dl>
+  </div>
+</section>
+<section class="section" id="contact" aria-labelledby="contact-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="logline">on-call for new roles</span>
+      <div>
+        <h2 class="section-title" id="contact-title">Get in touch</h2>
+        <p class="lede">I'm open to DevOps, SRE and Platform roles in Chennai, Bengaluru and Mumbai. Email is the fastest way to reach me.</p>
+      </div>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-line"><span class="label">Email</span><span class="mono" id="email-text">srinathram28@gmail.com</span><button class="copy-btn" type="button" data-copy="srinathram28@gmail.com" aria-label="Copy email address">Copy</button></div>
+      <div class="contact-line"><span class="label">LinkedIn</span><a href="https://www.linkedin.com/in/srinath-r-31964b249" rel="noopener">linkedin.com/in/srinath-r-31964b249</a></div>
+      <div class="contact-line"><span class="label">Résumé</span><a href="Srinath_R_DevOps_Resume.pdf" rel="noopener">Srinath_R_DevOps_Resume.pdf</a></div>
+      <div class="contact-line"><span class="label">Based in</span><span>Trichy, India · open to relocating to Chennai, Bengaluru or Mumbai</span></div>
+    </div>
+  </div>
+</section>
+<script>
+document.querySelectorAll(".copy-btn").forEach(function (btn) {
+  var timer;
+  function flash(text, ms) {
+    btn.textContent = text;
+    clearTimeout(timer);
+    timer = setTimeout(function () { btn.textContent = "Copy"; }, ms);
+  }
+  function selectSibling() {
+    var el = btn.parentElement && btn.parentElement.querySelector(".mono");
+    if (el && window.getSelection) {
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    flash("Selected, press Ctrl+C or Cmd+C", 4000);
+  }
+  btn.addEventListener("click", function () {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(btn.dataset.copy).then(function () { flash("Copied", 2000); }, selectSibling);
+    } else {
+      selectSibling();
+    }
+  });
+});
+</script>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Srinath R</span>
+    <span>Built as a single static page. No trackers.</span>
+  </div>
+</footer>
+</body>
+</html>
