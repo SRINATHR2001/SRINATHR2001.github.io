@@ -631,6 +631,7 @@ Waiting for deployment "api" rollout to finish:
         <li>Set the EKS cluster endpoint access mode to private. The Kubernetes API no longer answers from the internet and is reachable only through dedicated VPNs.</li>
         <li>Split Kubernetes RBAC into two roles. Admin users get complete access. Developer users map to an eks-devs group that can read, create and update resources, exec and port-forward in app namespaces, but has no delete verbs.</li>
         <li>Made the developer IAM policy allow only eks:DescribeCluster. IAM gets developers a token; everything they can do inside the cluster comes from RBAC.</li>
+        <li>Relied on GitOps as a second guard. Our ArgoCD Applications run with self-heal on, so if a developer patches a managed resource, ArgoCD reverts it to what is in Git.</li>
         <li>Kept kube-system and kube-node-lease out of every developer binding. A request there has no matching rule, so the API server denies it.</li>
         <li>Gave the external audit firm scoped cluster access for the VAPT and SOC work.</li>
         <li>Set up pod-level audit logging with rsyslog so activity inside pods leaves a record.</li>
@@ -709,7 +710,7 @@ Waiting for deployment "api" rollout to finish:
 <span class="c"># kube-system, kube-node-lease, kube-public and kube-admin.</span></pre>
     <div class="block">
       <h4>Result</h4>
-      <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and pods now produce audit logs through rsyslog.</p>
+      <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, ArgoCD self-heal reverts manual changes to managed resources, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and pods now produce audit logs through rsyslog.</p>
     </div>
     <div class="block">
       <h4>What I'd do next</h4>
