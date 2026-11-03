@@ -629,7 +629,8 @@ Waiting for deployment "api" rollout to finish:
       <ul>
         <li>Set up strict least-privilege IAM users and policies, so each person gets only the AWS permissions their work needs.</li>
         <li>Set the EKS cluster endpoint access mode to private. The Kubernetes API no longer answers from the internet and is reachable only through dedicated VPNs.</li>
-        <li>Split Kubernetes RBAC into two roles. Admin users get complete access. Developer users can view pods, logs and services, port-forward and exec in app namespaces, with no delete rights.</li>
+        <li>Split Kubernetes RBAC into two roles. Admin users get complete access. Developer users map to an eks-devs group that can read, create and update resources, exec and port-forward in app namespaces, but has no delete verbs.</li>
+        <li>Made the developer IAM policy allow only eks:DescribeCluster. IAM gets developers a token; everything they can do inside the cluster comes from RBAC.</li>
         <li>Kept kube-system and kube-node-lease out of every developer binding. A request there has no matching rule, so the API server denies it.</li>
         <li>Gave the external audit firm scoped cluster access for the VAPT and SOC work.</li>
         <li>Set up pod-level audit logging with rsyslog so activity inside pods leaves a record.</li>
@@ -639,7 +640,7 @@ Waiting for deployment "api" rollout to finish:
     <figure class="figure">
       <svg viewBox="0 0 760 350" role="img" aria-labelledby="sec-rbac-title sec-rbac-desc" xmlns="http://www.w3.org/2000/svg">
         <title id="sec-rbac-title">Namespace-scoped RBAC for developers</title>
-        <desc id="sec-rbac-desc">A developer is bound by a RoleBinding to a Role that allows get, list and watch on pods, pod logs and services, plus create on pods/portforward and pods/exec, with no delete verbs. This applies only in app namespaces. kube-system and kube-node-lease have no binding, so access there is denied.</desc>
+        <desc id="sec-rbac-desc">A developer in the eks-devs group is bound by per-namespace RoleBindings to a ClusterRole that allows get, list, watch, create, update and patch on namespaced resources, including pods/exec and pods/portforward, with no delete, deletecollection, escalate, bind or impersonate verbs. This applies only in app namespaces. kube-system and kube-node-lease have no binding, so access there is denied.</desc>
 
         <!-- Developer -->
         <rect x="20" y="122" width="120" height="56" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
@@ -653,7 +654,7 @@ Waiting for deployment "api" rollout to finish:
         <!-- RoleBinding -->
         <rect x="180" y="122" width="150" height="56" rx="6" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
         <text x="255" y="146" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">RoleBinding</text>
-        <text x="255" y="165" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">one per app namespace</text>
+        <text x="255" y="165" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="var(--muted)">eks-devs, per namespace</text>
 
         <!-- arrow binding -> role -->
         <line x1="330" y1="150" x2="362" y2="150" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
@@ -661,14 +662,13 @@ Waiting for deployment "api" rollout to finish:
 
         <!-- Role -->
         <rect x="370" y="60" width="210" height="180" rx="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
-        <text x="384" y="84" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">Role</text>
+        <text x="384" y="84" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">ClusterRole</text>
         <text x="384" y="108" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">get · list · watch</text>
-        <text x="384" y="125" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">pods, pods/log, services</text>
-        <text x="384" y="153" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">create  (port-forward)</text>
-        <text x="384" y="170" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">pods/portforward</text>
-        <text x="384" y="198" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">create  (exec)</text>
-        <text x="384" y="215" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">pods/exec</text>
-        <text x="384" y="232" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--signal)">no delete verbs</text>
+        <text x="384" y="125" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--accent)">create · update · patch</text>
+        <text x="384" y="153" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">namespaced resources,</text>
+        <text x="384" y="170" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">incl. pods/exec, portforward</text>
+        <text x="384" y="198" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--signal)">no delete/deletecollection</text>
+        <text x="384" y="215" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--signal)">no escalate/bind/impersonate</text>
 
         <!-- arrow role -> allowed -->
         <line x1="580" y1="150" x2="602" y2="150" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
@@ -694,22 +694,19 @@ Waiting for deployment "api" rollout to finish:
       </svg>
       <figcaption>Developers get a Role only through RoleBindings in app namespaces. kube-system and kube-node-lease have no developer binding, so those requests are denied. Rule details are illustrative.</figcaption>
     </figure>
-    <pre class="code"><span class="c"># Illustrative only: the shape of a developer Role, not the production manifest.</span>
+    <pre class="code"><span class="c"># Shape of the developer role. Bound per namespace with RoleBindings, never a ClusterRoleBinding.</span>
 <span class="k">apiVersion</span>: rbac.authorization.k8s.io/v1
-<span class="k">kind</span>: Role
+<span class="k">kind</span>: ClusterRole
 <span class="k">metadata</span>:
-  <span class="k">name</span>: developer
-  <span class="k">namespace</span>: team-app
+  <span class="k">name</span>: dev-exec-portforward
 <span class="k">rules</span>:
-  <span class="c"># read pods, their logs and services</span>
-  - <span class="k">apiGroups</span>: [""]
-    <span class="k">resources</span>: ["pods", "pods/log", "services"]
-    <span class="k">verbs</span>: ["get", "list", "watch"]
-  <span class="c"># kubectl port-forward and kubectl exec need create on these subresources</span>
-  - <span class="k">apiGroups</span>: [""]
-    <span class="k">resources</span>: ["pods/portforward", "pods/exec"]
-    <span class="k">verbs</span>: ["get", "create"]
-  <span class="c"># no delete, update or patch verbs anywhere: developers cannot remove workloads</span></pre>
+  <span class="c"># RBAC has no "deny", so "everything except delete" is an explicit verb list.</span>
+  <span class="c"># Left out: delete, deletecollection, escalate, bind, impersonate.</span>
+  - <span class="k">apiGroups</span>: ["*"]
+    <span class="k">resources</span>: ["*"]
+    <span class="k">verbs</span>: ["get", "list", "watch", "create", "update", "patch"]
+<span class="c"># A script binds this to group eks-devs in every namespace except</span>
+<span class="c"># kube-system, kube-node-lease, kube-public and kube-admin.</span></pre>
     <div class="block">
       <h4>Result</h4>
       <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and pods now produce audit logs through rsyslog.</p>
