@@ -631,7 +631,7 @@ Waiting for deployment "api" rollout to finish:
         <li><strong>IAM:</strong> created least-privilege IAM users and policies. The developer policy allows only eks:DescribeCluster, enough to get a token. Everything a developer can do inside the cluster comes from RBAC, not IAM.</li>
         <li><strong>RBAC:</strong> mapped IAM users to Kubernetes groups with EKS access entries. Admins get complete access. Developers are in an eks-devs group that can read, create and update resources, exec and port-forward in app namespaces, with no delete verbs. kube-system and kube-node-lease have no developer binding, so the API server denies those requests.</li>
         <li><strong>GitOps guard:</strong> ArgoCD Applications run with self-heal on, so if a developer patches a managed resource, ArgoCD reverts it to what is in Git.</li>
-        <li><strong>Audit:</strong> gave the external audit firm scoped cluster access for VAPT and SOC, and set up Falco for runtime monitoring, so suspicious activity inside pods, such as a shell opened in a container, is detected and logged.</li>
+        <li><strong>Audit:</strong> gave the external audit firm scoped cluster access for VAPT and SOC, and set up Falco for runtime monitoring, so suspicious activity inside pods, such as a shell opened in a container, is detected. Falco forwards its events to the external SOC team, who monitor them and alert us when something needs action.</li>
         <li><strong>On-call:</strong> handled off-hours security escalations with broker clients, including a 4 AM call on a Sunday.</li>
       </ul>
     </div>
@@ -707,7 +707,7 @@ Waiting for deployment "api" rollout to finish:
 <span class="c"># kube-system, kube-node-lease, kube-public and kube-admin.</span></pre>
     <div class="block">
       <h4>Result</h4>
-      <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, ArgoCD self-heal reverts manual changes to managed resources, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and Falco now records suspicious activity inside pods.</p>
+      <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, ArgoCD self-heal reverts manual changes to managed resources, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and suspicious activity inside pods now reaches the external SOC team through Falco.</p>
     </div>
     <div class="block">
       <h4>What I'd do next</h4>
