@@ -426,7 +426,7 @@ Waiting for deployment "api" rollout to finish:
     </div>
     <div class="block">
       <h4>What I'd do next</h4>
-      <p>As traffic grows, I would add Elasticsearch replicas and more nodes for high availability. I would move alerting toward SLOs, so alerts fire on user-facing error budgets instead of raw thresholds. I would also look at OpenTelemetry to add traces and keep instrumentation portable as the company moves to AWS EKS.</p>
+      <p>As traffic grows, I would add Elasticsearch replicas and more nodes for high availability. I would move alerting toward SLOs, so alerts fire on user-facing error budgets instead of raw thresholds. I would also look at OpenTelemetry to add traces and keep instrumentation portable.</p>
     </div>
   </div>
 </article>
@@ -434,7 +434,7 @@ Waiting for deployment "api" rollout to finish:
   <div class="case-meta">
     <span class="when">Nov 2025 – present</span>
     <span>Simply Algo Fintech · DevOps Engineer · Quantman &amp; Instaoptions</span>
-    <ul class="tags"><li>Jenkins</li><li>Helm</li><li>ArgoCD</li><li>Kubernetes</li><li>DigitalOcean</li><li>GitOps</li></ul>
+    <ul class="tags"><li>Jenkins</li><li>Helm</li><li>ArgoCD</li><li>Kubernetes</li><li>AWS EKS</li><li>GitOps</li></ul>
   </div>
   <div class="case-main">
     <h3 id="case-releases-title">Almost-daily releases to live trading platforms, after the market closes</h3>
@@ -454,7 +454,7 @@ Waiting for deployment "api" rollout to finish:
         <li>Shipped releases through Jenkins (CI), Helm charts and ArgoCD, which syncs the cluster to what is in Git.</li>
         <li>Used Kubernetes rolling updates with readiness probes, so a new pod only takes traffic once it reports ready.</li>
         <li>Tuned maxSurge and maxUnavailable to keep trading services available while old pods are replaced.</li>
-        <li>Wrote ArgoCD Application manifests for newly deployed services, so they follow the same GitOps path as the rest.</li>
+        <li>Wrote ArgoCD Application manifests for newly deployed services, so they follow the same GitOps path as the rest. Applications run with auto-sync, self-heal and prune, so Git stays the source of truth.</li>
         <li>Handled 3 broker deployments of Quantman: 2 end-to-end and 1 in a support role.</li>
         <li>Acted as the technical point of contact for the broker's team. I gathered infra requirements, raised IP-whitelisting and network-access requests, attended networking and security meetings and handled security escalations.</li>
       </ul>
@@ -603,7 +603,7 @@ Waiting for deployment "api" rollout to finish:
     </div>
     <div class="block">
       <h4>What I'd do next</h4>
-      <p>I want to try progressive delivery with Argo Rollouts, so a release goes to a small canary first and is promoted only if its metrics look healthy. I'd pair that with automated rollback when an SLO error budget starts burning too fast. For the company's move to AWS EKS, I'd like to define the new infrastructure in Terraform from the start, which also means taking my Terraform skills past the basics.</p>
+      <p>I want to try progressive delivery with Argo Rollouts, so a release goes to a small canary first and is promoted only if its metrics look healthy. I'd pair that with automated rollback when an SLO error budget starts burning too fast. I'd also like to define our EKS infrastructure in Terraform, which means taking my Terraform skills past the basics.</p>
     </div>
   </div>
 </article>
@@ -627,15 +627,12 @@ Waiting for deployment "api" rollout to finish:
     <div class="block">
       <h4>What I did</h4>
       <ul>
-        <li>Set up strict least-privilege IAM users and policies, so each person gets only the AWS permissions their work needs.</li>
-        <li>Set the EKS cluster endpoint access mode to private. The Kubernetes API no longer answers from the internet and is reachable only through dedicated VPNs.</li>
-        <li>Split Kubernetes RBAC into two roles. Admin users get complete access. Developer users map to an eks-devs group that can read, create and update resources, exec and port-forward in app namespaces, but has no delete verbs.</li>
-        <li>Made the developer IAM policy allow only eks:DescribeCluster. IAM gets developers a token; everything they can do inside the cluster comes from RBAC.</li>
-        <li>Relied on GitOps as a second guard. Our ArgoCD Applications run with self-heal on, so if a developer patches a managed resource, ArgoCD reverts it to what is in Git.</li>
-        <li>Kept kube-system and kube-node-lease out of every developer binding. A request there has no matching rule, so the API server denies it.</li>
-        <li>Gave the external audit firm scoped cluster access for the VAPT and SOC work.</li>
-        <li>Set up pod-level audit logging with rsyslog so activity inside pods leaves a record.</li>
-        <li>Took part in on-call, including off-hours security escalations with broker clients. One of them was a 4 AM call on a Sunday.</li>
+        <li><strong>Network:</strong> set the EKS cluster endpoint access mode to private. The Kubernetes API no longer answers from the internet; it accepts traffic only from our dedicated VPN servers inside the cluster's network.</li>
+        <li><strong>IAM:</strong> created least-privilege IAM users and policies. The developer policy allows only eks:DescribeCluster, enough to get a token. Everything a developer can do inside the cluster comes from RBAC, not IAM.</li>
+        <li><strong>RBAC:</strong> mapped IAM users to Kubernetes groups with EKS access entries. Admins get complete access. Developers are in an eks-devs group that can read, create and update resources, exec and port-forward in app namespaces, with no delete verbs. kube-system and kube-node-lease have no developer binding, so the API server denies those requests.</li>
+        <li><strong>GitOps guard:</strong> ArgoCD Applications run with self-heal on, so if a developer patches a managed resource, ArgoCD reverts it to what is in Git.</li>
+        <li><strong>Audit:</strong> gave the external audit firm scoped cluster access for VAPT and SOC, and set up pod-level audit logging with rsyslog so activity inside pods leaves a record.</li>
+        <li><strong>On-call:</strong> handled off-hours security escalations with broker clients, including a 4 AM call on a Sunday.</li>
       </ul>
     </div>
     <figure class="figure">
@@ -693,7 +690,7 @@ Waiting for deployment "api" rollout to finish:
         <rect x="560" y="282" width="180" height="46" rx="6" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1.5"/>
         <text x="650" y="310" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink)">kube-node-lease</text>
       </svg>
-      <figcaption>Developers get a Role only through RoleBindings in app namespaces. kube-system and kube-node-lease have no developer binding, so those requests are denied. Rule details are illustrative.</figcaption>
+      <figcaption>Developers get the ClusterRole only through RoleBindings in app namespaces, so it never applies cluster-wide. kube-system and kube-node-lease have no developer binding, so those requests are denied. Verbs match the real developer role.</figcaption>
     </figure>
     <pre class="code"><span class="c"># Shape of the developer role. Bound per namespace with RoleBindings, never a ClusterRoleBinding.</span>
 <span class="k">apiVersion</span>: rbac.authorization.k8s.io/v1
@@ -714,7 +711,7 @@ Waiting for deployment "api" rollout to finish:
     </div>
     <div class="block">
       <h4>What I'd do next</h4>
-      <p>I would move these rules into policy as code with Kyverno or OPA Gatekeeper, so a risky manifest is rejected at admission time instead of found in an audit. I would add image scanning with Trivy to the Jenkins pipeline so vulnerable images fail the build. I would also move application secrets into a dedicated secrets manager as part of the move to AWS.</p>
+      <p>I would move these rules into policy as code with Kyverno or OPA Gatekeeper, so a risky manifest is rejected at admission time instead of found in an audit. I would add image scanning with Trivy to the Jenkins pipeline so vulnerable images fail the build. I would enforce Pod Security Admission on app namespaces so privileged pods are rejected, and move application secrets into AWS Secrets Manager.</p>
     </div>
   </div>
 </article></div></section>
