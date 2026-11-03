@@ -611,7 +611,7 @@ Waiting for deployment "api" rollout to finish:
   <div class="case-meta">
     <span class="when">Nov 2025 – present</span>
     <span>Simply Algo Fintech · DevOps Engineer</span>
-    <ul class="tags"><li>Kubernetes RBAC</li><li>AWS EKS</li><li>IAM</li><li>VPN</li><li>SOC audit</li><li>On-call</li></ul>
+    <ul class="tags"><li>Kubernetes RBAC</li><li>AWS EKS</li><li>IAM</li><li>VPN</li><li>Falco</li><li>SOC audit</li><li>On-call</li></ul>
   </div>
   <div class="case-main">
     <h3 id="case-security-title">Locking down cluster access for a trading platform</h3>
@@ -631,7 +631,7 @@ Waiting for deployment "api" rollout to finish:
         <li><strong>IAM:</strong> created least-privilege IAM users and policies. The developer policy allows only eks:DescribeCluster, enough to get a token. Everything a developer can do inside the cluster comes from RBAC, not IAM.</li>
         <li><strong>RBAC:</strong> mapped IAM users to Kubernetes groups with EKS access entries. Admins get complete access. Developers are in an eks-devs group that can read, create and update resources, exec and port-forward in app namespaces, with no delete verbs. kube-system and kube-node-lease have no developer binding, so the API server denies those requests.</li>
         <li><strong>GitOps guard:</strong> ArgoCD Applications run with self-heal on, so if a developer patches a managed resource, ArgoCD reverts it to what is in Git.</li>
-        <li><strong>Audit:</strong> gave the external audit firm scoped cluster access for VAPT and SOC, and set up pod-level audit logging with rsyslog so activity inside pods leaves a record.</li>
+        <li><strong>Audit:</strong> gave the external audit firm scoped cluster access for VAPT and SOC, and set up Falco for runtime monitoring, so suspicious activity inside pods, such as a shell opened in a container, is detected and logged.</li>
         <li><strong>On-call:</strong> handled off-hours security escalations with broker clients, including a 4 AM call on a Sunday.</li>
       </ul>
     </div>
@@ -707,7 +707,7 @@ Waiting for deployment "api" rollout to finish:
 <span class="c"># kube-system, kube-node-lease, kube-public and kube-admin.</span></pre>
     <div class="block">
       <h4>Result</h4>
-      <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, ArgoCD self-heal reverts manual changes to managed resources, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and pods now produce audit logs through rsyslog.</p>
+      <p>The cluster API is off the public internet and reachable only over VPN. Developers can debug their own services without admin access, but they cannot delete workloads, ArgoCD self-heal reverts manual changes to managed resources, and no developer binding reaches kube-system or kube-node-lease. The audit firm got the access it needed for VAPT and SOC, and Falco now records suspicious activity inside pods.</p>
     </div>
     <div class="block">
       <h4>What I'd do next</h4>
@@ -827,7 +827,7 @@ Waiting for deployment "api" rollout to finish:
       <div><dt>Containers &amp; orchestration</dt><dd><ul class="tags"><li>Kubernetes</li><li>RBAC</li><li>Ingress</li><li>Namespaces</li><li>Probes</li><li>Rolling updates</li><li>Helm</li><li>Docker</li><li>Docker Compose</li></ul></dd></div>
       <div><dt>CI/CD &amp; GitOps</dt><dd><ul class="tags"><li>Jenkins</li><li>GitHub Actions</li><li>ArgoCD</li><li>Expo EAS</li><li>BrowserStack integration</li></ul></dd></div>
       <div><dt>Observability</dt><dd><ul class="tags"><li>Elasticsearch</li><li>Kibana</li><li>Filebeat</li><li>ILM/SLM</li><li>Prometheus</li><li>Grafana</li><li>Uptime Kuma</li><li>Slack alerting</li></ul></dd></div>
-      <div><dt>Security</dt><dd><ul class="tags"><li>IAM least privilege</li><li>Kubernetes RBAC</li><li>Private EKS endpoints</li><li>VPN-only access</li><li>SOC audit support</li><li>rsyslog audit logging</li><li>Nginx</li></ul></dd></div>
+      <div><dt>Security</dt><dd><ul class="tags"><li>IAM least privilege</li><li>Kubernetes RBAC</li><li>Private EKS endpoints</li><li>VPN-only access</li><li>SOC audit support</li><li>Falco runtime security</li><li>Nginx</li></ul></dd></div>
       <div><dt>Scripting &amp; IaC</dt><dd><ul class="tags"><li>Bash</li><li>Python</li><li>YAML</li><li>Git</li><li>Terraform (basic: EC2)</li></ul></dd></div>
       <div class="learning"><dt>Learning now</dt><dd>Going deeper with Terraform, learning Ansible, and preparing for the CKAD exam.</dd></div>
     </dl>
